@@ -4,6 +4,7 @@ from essentia.standard import *
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal
+import otsu
 
 def read_audio(filename, sample_rate = 44100):
     """read audio file into a list"""
@@ -276,6 +277,12 @@ def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold =
 
     return segmets
 
+def otsu_test(matrix):
+    img = otsu.quantify(matrix)
+    gray = otsu.getGray(img)
+    threshold = otsu.getThres(gray)
+    otsu.binarize(img, threshold, 1)
+
 
 # extract audio feature
 audio = read_audio('/Users/xueweiyao/Downloads/musics/Madonna - Like a Virgin.wav')
@@ -287,13 +294,19 @@ chroma = extract_chroma_by_beat(audio, beats)
 sdm_chroma = calculate_sdm(chroma)
 sdm_mfcc = calculate_sdm(mfcc)
 
+
+
 #enhance the self-distance matrix
 enhanced_mat = enhance_sdm(sdm_chroma)
 
 # sum the mfcc self-distance matrix and enhanced chroma self-distance matrix
 sdm_new = enhanced_mat + sdm_mfcc
 
-bimar, indeces = detect_repetition(enhanced_mat)
+# plt.matshow(sdm_new, cmap = plt.cm.gray)
+# plt.show()
+# otsu_test(sdm_new)
+
+bimar, indeces = detect_repetition(sdm_new)
 segment = locate_interesting_segment(bimar, indeces, beats_time)
 
 # plt.matshow(enhanced_mat, cmap=plt.cm.gray)
@@ -306,4 +319,3 @@ segment = locate_interesting_segment(bimar, indeces, beats_time)
 # plt.plot(dig_lp)
 # plt.plot(dig_smooth_diiiferentia)
 
-plt.show()
