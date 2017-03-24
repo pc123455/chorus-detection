@@ -30,7 +30,7 @@ def extract_mfcc_by_beat(audio, beats):
     mfccs = []
     w = Windowing(type = 'square')
 
-    for i in range(0, len(beats) - 1):
+    for i in range(len(beats) - 1):
         buffer = audio[int(beats[i]) : int(beats[i + 1])]
 
         if len(buffer) % 2 != 0:
@@ -52,7 +52,7 @@ def extract_chroma_by_beat(audio, beats):
     hpcp = HPCP()
     chromas = []
 
-    for i in range(0, len(beats) - 1):
+    for i in range(len(beats) - 1):
         buffer = audio[int(beats[i]) : int(beats[i + 1])]
 
         if len(buffer) % 2 != 0:
@@ -71,9 +71,9 @@ def calculate_sdm(feature_matrix):
     """calculate the self-distance matrix"""
     length = len(feature_matrix)
     self_distance_matrix = np.zeros((length, length))
-    for i in range(0, length):
+    for i in range(length):
         row1 = feature_matrix[i, :]
-        for j in range(0, length):
+        for j in range(length):
             row2 = feature_matrix[j, :]
             self_distance_matrix[i, j] = np.sqrt(np.sum(np.square(row1 - row2)))
 
@@ -107,7 +107,7 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
 
     length = len(sdm)
     dig_mean = np.zeros(length)
-    for i in range(0, length):
+    for i in range(length):
         dig_mean[i] = np.sum(np.diag(sdm, -i)) / (length - i)
 
     # using a FIR filter to smooth mean of diagonals
@@ -123,7 +123,7 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     # the minima value is the minimum value of diagonals
     minima = np.array([])
     minima_indeces = np.array([], dtype = int)
-    for i in range(0, len(dig_smooth_diiiferentia) - 1):
+    for i in range(len(dig_smooth_diiiferentia) - 1):
         if dig_smooth_diiiferentia[i] < 0 and dig_smooth_diiiferentia[i + 1] > 0:
             minima_indeces = np.append(minima_indeces, i)
             minima = np.append(minima, dig[i])
@@ -163,7 +163,7 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
 
     for index in minima_indeces:
         temp = np.diag(sdm, -index)
-        for j in range(0, len(temp)):
+        for j in range(len(temp)):
             if temp[j] > threshold:
                 binary_matrix[index + j, j] = 1
 
@@ -187,7 +187,7 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
 
             kernel = temp[j : j + 25 - 1]
             if isenhance(kernel):
-                for k in range(0, 25):
+                for k in range(25):
                     enhanced_binary_matrix[index + j + k] = 1
 
                 j = j + 25 - 1
@@ -223,7 +223,7 @@ def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold =
     is_segment_bedin = False
     for index in indeces:
         temp = np.diag(binary_matrix, -index)
-        for j in range(0, len(temp)):
+        for j in range(len(temp)):
             if (temp[j] == 0 and is_segment_bedin == False) or (temp[j] == 1 and is_segment_bedin == True):
                 continue
             else:
@@ -240,7 +240,8 @@ def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold =
     # using the time during whose default value is 4s to filter segment
     del_indeces = np.array([], dtype = int)
     new_binary_matrix = binary_matrix.copy()
-    for i in range(0, len(segments)):
+    for i in range(len(segments)):
+
         time_begin = beats[segments[i, 0]]
         time_end = beats[segments[i, 2]]
         if time_end - time_begin < during_threshold:
@@ -252,40 +253,40 @@ def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold =
                 col_begin = segments[i, 1]
                 new_binary_matrix[row, row - row_begin + col_begin] = 0
 
-    segmets = np.delete(segments, del_indeces, axis=0)
+    segments = np.delete(segments, del_indeces, axis=0)
 
-    length = len(segmets)
+    length = len(segments)
     # the matrix which denote if segment is close with each other
-    segmets_close_matrix = np.zeros([length, length], dtype = int)
-    for i in range(0, length):
-        for j in range(0, length):
+    segments_close_matrix = np.zeros([length, length], dtype = int)
+    for i in range(length):
+        for j in range(length):
             if i == j:
                 continue
-            x1 = segmets[i, :]
-            x2 = segmets[j, :]
+            x1 = segments[i, :]
+            x2 = segments[j, :]
 
             # determine if segment is close with each other
             if x2[0] >= x1[0] - 5 and x2[2] <= x1[2] + 20 and abs(x2[1] - x1[1]) <= 20 and x2[3] <= x1[3] + 5:
-                segmets_close_matrix[i, j] = 1
+                segments_close_matrix[i, j] = 1
 
     #delete some segments with less than 3 closed segment
     del_indeces = np.array([], dtype=int)
-    close_count = np.sum(segmets_close_matrix, axis = 0)
-    for i in range(0, len(segmets)):
+    close_count = np.sum(segments_close_matrix, axis = 0)
+    for i in range(len(segments)):
         if close_count[i] < 3:
             del_indeces = np.append(del_indeces, i)
 
             # set the binary matrix
-            for row in range(segmets[i, 0], segmets[i, 2]):
-                row_begin = segmets[i, 0]
-                col_begin = segmets[i, 1]
+            for row in range(segments[i, 0], segments[i, 2]):
+                row_begin = segments[i, 0]
+                col_begin = segments[i, 1]
                 new_binary_matrix[row, row - row_begin + col_begin] = 0
 
-    segmets = np.delete(segmets, del_indeces, axis = 0)
+    segments = np.delete(segments, del_indeces, axis = 0)
     # plt.matshow(new_binary_matrix, cmap=plt.cm.gray)
     # plt.show()
 
-    return segmets, new_binary_matrix
+    return segments, new_binary_matrix
 
 def otsu_test(matrix):
     img = otsu.quantify(matrix)
@@ -305,7 +306,7 @@ def get_otsu_threshold(matrix, depth = 8):
     threshold = float(threshold) / (pow(2, 8) - 1) * (maximum - minimum) + minimum
     return threshold
 
-def select_diagonal_seegment_like_chorus(sdm, binary_matrix, segments, audio, beats):
+def calculate_segments_scores(sdm, binary_matrix, segments, audio, beats):
     # M is the length of the song beats
     M = float(len(binary_matrix))
 
@@ -313,7 +314,7 @@ def select_diagonal_seegment_like_chorus(sdm, binary_matrix, segments, audio, be
     length = len(segments)
     scores = np.zeros([length, 2])
     for i in range(length):
-        delta_x = segments[i, 2] - segments[i, 0]
+        delta_x = float(segments[i, 2] - segments[i, 0])
 
         # calculate s_1-score
         # s_1-score measures the difference of the middle column of segment x_p[i, j, i', j'] to one quarter of song length
@@ -328,7 +329,7 @@ def select_diagonal_seegment_like_chorus(sdm, binary_matrix, segments, audio, be
     scores = np.concatenate((scores, s_3_scores), axis = 1)
 
     # s_4 and s_5
-    average_energy = np.mean(audio)
+    average_energy = np.mean(np.square(audio))
     average_distance = np.mean(sdm)
     s_4_and_5_score = np.zeros([length, 2])
     for i in range(length):
@@ -339,15 +340,27 @@ def select_diagonal_seegment_like_chorus(sdm, binary_matrix, segments, audio, be
         median_distance = get_median_distance(sdm, segments[i, :])
         s_4_and_5_score[i, 1] = 1 - median_distance / average_distance
 
-    scores = np.concatenate((scores, s_4_and_5_score), axis=1)
+    scores = np.concatenate((scores, s_4_and_5_score), axis = 1)
 
+    s_6_score = calculate_s6(segments)
 
+    scores = np.concatenate((scores, s_6_score), axis = 1)
 
+    return scores
+
+def select_segment_most_likely_chorus(scores, beats_time, segments):
+    """calculate the final score of segments"""
+    length = len(scores)
+    final_score = np.zeros([length, 1])
+    for i in range(length):
+        final_score[i, 0] = 0.5 * (scores[i, 0] + scores[i, 1] + scores[i, 3] + scores[i, 5]) + scores[i, 2] + scores[i, 4]
+
+    best = segments[np.where(final_score == np.max(final_score)), :]
+    return final_score, best
 
 def calculate_s3(segments):
     """calculate the s_3-score of segments
     """
-
     groups = np.empty([0, 4])
     group = np.zeros([1, 4])
     length = len(segments)
@@ -381,13 +394,13 @@ def calculate_s3(segments):
     # structure of groups row -> | x_u | x_b | x_r | sigma_hat_z |
     group_len = len(groups)
     for i in range(group_len):
-        x_u = segments[groups[i, 0], :]
-        x_b = segments[groups[i, 1], :]
-        x_r = segments[groups[i, 2], :]
+        x_u = segments[int(groups[i, 0]), :]
+        x_b = segments[int(groups[i, 1]), :]
+        x_r = segments[int(groups[i, 2]), :]
 
-        delta_x_u = x_u[2] - x_u[0]
-        delta_x_b = x_b[2] - x_b[0]
-        delta_x_r = x_r[2] - x_r[0]
+        delta_x_u = float(x_u[2] - x_u[0])
+        delta_x_b = float(x_b[2] - x_b[0])
+        delta_x_r = float(x_r[2] - x_r[0])
 
         # sigma_1-score measures how close is the end point of the above segment x_u and below segment x_b
         sigma_1 = 1 - 2 * np.abs(x_u[3] - x_b[3]) / (delta_x_b + delta_x_u)
@@ -411,7 +424,7 @@ def calculate_s3(segments):
 
     #calculate the final s3_score of each segment
     s_3_scores = np.zeros([length, 1])
-    for i in range(length):
+    for i in range(group_len):
         b_index = int(groups[i, 1])
         s_3 = groups[i, 3]
         if s_3_scores[b_index, 0] < s_3:
@@ -419,23 +432,51 @@ def calculate_s3(segments):
 
     return s_3_scores
 
+def calculate_s6(segments):
+    length = len(segments)
+    repetition_counts = np.zeros([length, 1])
+    for i in range(length):
+        x_p = segments[i, :]
+        for j in range(length):
+            if i == j:
+                continue
+
+            x_q = segments[j, :]
+            delta_x_q = x_q[2] - x_q[0]
+            if np.abs(x_p[1] - x_q[1]) <= 0.2 * delta_x_q and np.abs(x_p[3] - x_q[3]) <= 0.2 * delta_x_q:
+                repetition_counts[i, 0] += 1
+
+    s_6_scores = repetition_counts / np.max(repetition_counts)
+
+    return s_6_scores
+
 def get_average_energy(audio, beats, begin, end):
     """calculate the average energy of audio segment"""
-    buffer = audio[int(beats[int(begin)]):int(beats[int(end)])]
+    buffer = np.square(audio[int(beats[int(begin)]):int(beats[int(end)])])
     average = np.mean(buffer)
     return average
 
 def get_median_distance(sdm, segment):
     """calculate the median distance of self-distance matrix"""
-    r_1 = segment[0, 0]
-    c_1 = segment[0, 1]
-    r_2 = segment[0, 2]
-    c_2 = segment[0, 3]
+    r_1 = segment[0]
+    c_1 = segment[1]
+    r_2 = segment[2]
+    c_2 = segment[3]
 
     return np.median(np.diag(sdm[r_1 : r_2, c_1 : c_2]))
 
+
+def get_segment_time(segment, beats_time):
+    length = len(segment)
+    time = np.zeros([length, 4])
+    for i in range(len(segment)):
+        for j in range(4):
+            time[i, j] = beats_time[segment[i, j]]
+
+    return time
+
 # extract audio feature
-audio = read_audio("/Users/xueweiyao/Downloads/musics/Madonna - Like a Virgin.wav")
+audio = read_audio("/Users/xueweiyao/Downloads/musics/汪峰 - 存在.wav")
 beats, beats_time = extract_beat(audio)
 mfcc = extract_mfcc_by_beat(audio, beats)
 chroma = extract_chroma_by_beat(audio, beats)
@@ -458,7 +499,11 @@ sdm_new = enhanced_mat + sdm_mfcc
 
 bimar, indeces = detect_repetition(sdm_new)
 segments, bimar = locate_interesting_segment(bimar, indeces, beats_time)
-select_diagonal_seegment_like_chorus(sdm_new, bimar, segments, audio, beats, np.mean(audio))
+scores = calculate_segments_scores(sdm_new, bimar, segments, audio, beats)
+final_score, best = select_segment_most_likely_chorus(scores, beats_time, segments)
+
+time = get_segment_time(best, beats_time)
+print time
 
 # plt.matshow(enhanced_mat, cmap=plt.cm.gray)
 # plt.matshow(sdm_fcc, cmap=plt.cm.gray)
