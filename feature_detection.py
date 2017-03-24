@@ -1,3 +1,4 @@
+#-*- coding: UTF-8 -*-
 import essentia
 import essentia.standard
 from essentia.standard import *
@@ -119,23 +120,34 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     dig_smooth_diiiferentia = scipy.signal.lfilter(B, 1 ,dig)
 
     # index where the smoothed differential of diagonals from negative to positive
+    # the minima value is the minimum value of diagonals
     minima = np.array([])
     minima_indeces = np.array([], dtype = int)
     for i in range(0, len(dig_smooth_diiiferentia) - 1):
         if dig_smooth_diiiferentia[i] < 0 and dig_smooth_diiiferentia[i + 1] > 0:
             minima_indeces = np.append(minima_indeces, i)
-            minima = np.append(minima, dig_smooth_diiiferentia[i])
+            minima = np.append(minima, dig[i])
 
     # delete max value
-    if len(minima) > diagonal_num:
-        while True:
-            add = np.where(minima == max(minima))
-            add = add[0 : len(minima) - diagonal_num]
-            minima = np.delete(minima, add)
-            minima_indeces = np.delete(minima_indeces, add)
+    # if len(minima) > diagonal_num:
+    #     while True:
+    #         add = np.where(minima == max(minima))
+    #         add = add[0 : len(minima) - diagonal_num]
+    #         minima = np.delete(minima, add)
+    #         minima_indeces = np.delete(minima_indeces, add)
+    #
+    #         if len(minima) <= diagonal_num:
+    #             break
 
-            if len(minima) <= diagonal_num:
-                break
+    # delete by otsu algorithm
+    threshold_otsu = get_otsu_threshold(np.matrix(minima))
+    del_indeces = np.array([])
+    for i in range(len(minima)):
+        if minima[i] > threshold_otsu:
+            del_indeces = np.append(del_indeces, i)
+
+    minima = np.delete(minima, del_indeces)
+    minima_indeces = np.delete(minima_indeces, del_indeces)
 
     # calculate a threshold
     long_vector = np.array([])
@@ -209,7 +221,7 @@ def isenhance(kernel):
 def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold = 4):
     """find the locate interesting segment by binary matrix"""
     point = np.zeros([1, 4], dtype = int)
-    segmets = np.empty([0, 4], dtype = int)
+    segments = np.empty([0, 4], dtype = int)
     is_segment_bedin = False
     for index in indeces:
         temp = np.diag(binary_matrix, -index)
@@ -225,24 +237,24 @@ def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold =
                     point[0, 2] = index + j
                     point[0, 3] = j
                     is_segment_bedin = False
-                    segmets = np.append(segmets, point, axis = 0)
+                    segments = np.append(segments, point, axis = 0)
 
     # using the time during whose default value is 4s to filter segment
     del_indeces = np.array([], dtype = int)
     new_binary_matrix = binary_matrix.copy()
-    for i in range(0, len(segmets)):
-        time_begin = beats[segmets[i, 0]]
-        time_end = beats[segmets[i, 2]]
+    for i in range(0, len(segments)):
+        time_begin = beats[segments[i, 0]]
+        time_end = beats[segments[i, 2]]
         if time_end - time_begin < during_threshold:
             del_indeces = np.append(del_indeces, i)
 
             # set the binary matrix
-            for row in range(segmets[i, 0], segmets[i, 2]):
-                row_begin = segmets[i, 0]
-                col_begin = segmets[i, 1]
+            for row in range(segments[i, 0], segments[i, 2]):
+                row_begin = segments[i, 0]
+                col_begin = segments[i, 1]
                 new_binary_matrix[row, row - row_begin + col_begin] = 0
 
-    segmets = np.delete(segmets, del_indeces, axis=0)
+    segmets = np.delete(segments, del_indeces, axis=0)
 
     length = len(segmets)
     # the matrix which denote if segment is close with each other
@@ -283,9 +295,21 @@ def otsu_test(matrix):
     threshold = otsu.getThres(gray)
     otsu.binarize(img, threshold, 1)
 
+def get_otsu_threshold(matrix, depth = 8):
+    maximum = np.max(matrix)
+    minimum = np.min(matrix)
+    img = matrix.copy()
+    img = (img - minimum) / (maximum - minimum) * (pow(2, depth) - 1)
+
+    gray = otsu.getGray(img)
+    threshold = otsu.getThres(gray)
+
+    threshold = float(threshold) / (pow(2, 8) - 1) * (maximum - minimum) + minimum
+    return threshold
+
 
 # extract audio feature
-audio = read_audio('/Users/xueweiyao/Downloads/musics/Madonna - Like a Virgin.wav')
+audio = read_audio("/Users/xueweiyao/Downloads/musics/Madonna - Like a Virgin.wav")
 beats, beats_time = extract_beat(audio)
 mfcc = extract_mfcc_by_beat(audio, beats)
 chroma = extract_chroma_by_beat(audio, beats)

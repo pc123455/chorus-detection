@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def quantify(matrix, depth = 8):
-    black = 0
-    white = pow(2, depth) - 1
     image = matrix.copy()
-    maximum = np.max(matrix)
-    coeff = float(white) / maximum
-    image *= coeff
+    minimum = np.min(image)
+    maximum = np.max(image)
+    image = (image - minimum) / (maximum - minimum)
+    image *= (pow(2, depth) - 1)
+    image = image
     return image
 
 
@@ -17,11 +17,11 @@ def getGray(img, depth = 8):
     height, width = img.shape
     for h in range(height):
         for w in range(width):
-            numGray[int(img[h, w])] += 1
+            numGray[int(round(img[h, w]))] += 1
     return numGray
 
 
-def getThres(gray):
+def getThres(gray, depth = 8):
     maxV = 0
     bestTh = 0
     w = [0 for i in range(len(gray))]
