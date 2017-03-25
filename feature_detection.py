@@ -351,11 +351,11 @@ def calculate_segments_scores(sdm, binary_matrix, segments, audio, beats):
 def select_segment_most_likely_chorus(scores, beats_time, segments):
     """calculate the final score of segments"""
     length = len(scores)
-    final_score = np.zeros([length, 1])
+    final_score = np.zeros(length)
     for i in range(length):
-        final_score[i, 0] = 0.5 * (scores[i, 0] + scores[i, 1] + scores[i, 3] + scores[i, 5]) + scores[i, 2] + scores[i, 4]
+        final_score[i] = 0.5 * (scores[i, 0] + scores[i, 1] + scores[i, 3] + scores[i, 5]) + scores[i, 2] + scores[i, 4]
 
-    best = segments[np.where(final_score == np.max(final_score)), :]
+    best = segments[np.argmax(final_score)]
     return final_score, best
 
 def calculate_s3(segments):
@@ -465,7 +465,6 @@ def get_median_distance(sdm, segment):
 
     return np.median(np.diag(sdm[r_1 : r_2, c_1 : c_2]))
 
-
 def get_segment_time(segment, beats_time):
     length = len(segment)
     time = np.zeros([length, 4])
@@ -474,6 +473,111 @@ def get_segment_time(segment, beats_time):
             time[i, j] = beats_time[segment[i, j]]
 
     return time
+
+def find_location_of_chorus(segments, sdm):
+    segment = segments[0].copy()
+    chorus = np.zeros([1, 4])
+
+    M = len(sdm)
+    length = segment[2] - segment[0]
+    rho_32 = np.zeros([length, 2])
+    rho_64 = np.zeros([length, 2])
+    for i in range(length):
+        x = segment + i
+        rho_32[i] = filter_2d(x, sdm, 32)
+        rho_64[i] = filter_2d(x, sdm, 64)
+
+    rho_min_32 = np.min(rho_32, axis = 0)
+    rho_min_64 = np.min(rho_64, axis = 0)
+
+    chorus_begin = segment[1]
+    chorus_end = segment[3]
+
+    # if min_roh_alpha_64 < min_roh_alpha_32, indicates a good match with the 64 beat long chorus with two 32 beat long subsections
+    if rho_min_64[0] < rho_min_32[0]:
+        chorus_begin = segment[1] + np.argmin(rho_min_64[:, 0], axis = 0)
+        chorus_end = np.min([chorus_begin + 64, M])
+
+    elif length < 32:
+        chorus_begin = segment[1] + np.argmax(rho_min_32[:, 0], axis = 0)
+
+    elif np.abs(length - 48) < np.abs(length - 32) and np.abs(length - 48) < np.abs(length - 64) \
+            and rho_min_32[0] < rho_min_64[0] and rho_min_32[1] < rho_min_32[1] \
+            and np.argmin(rho_min_32[:, 0]) == np.argmin(rho_min_32[:, 1]):
+        chorus_begin = segment[1] + np.argmin(rho_min_32[:, 0])
+        chorus_end = np.min([chorus_begin + 32, M])
+
+    else:
+        segment[0] = np.max([1, segment[0] - 5])
+        segment[1] = np.min([M, segment[1] + 5])
+        segment[2] = np.max([1, segment[2] - 5])
+        segment[3] = np.min([M, segment[3] + 5])
+
+        rate = filter_1d(x, sdm)
+        if np.min(rate < 0.7) and np.abs(length - 32) < np.abs(length - 64):
+            chorus_begin = segment[1] + np.argmin(rate)
+            chorus_end = np.min([chorus_begin + 32, M])
+
+        elif length > 48:
+            chorus_begin = segment[1] + np.argmin(rate)
+            chorus_end = np.min([chorus_begin + 48, M])
+
+    return chorus_begin, chorus_end
+
+def filter_2d(x, sdm, size):
+    """calculate the rho rate for a point in self-distance matrix"""
+    col_begin = np.max([1, x[1] - int(size / 2)]) - 1
+    col_end = np.min([x[1] + int(size / 2), len(sdm)]) - 1
+    row_begin = np.max([1, x[0] - int(size / 2)]) - 1
+    row_end = np.min([x[0] + int(size / 2), len(sdm)]) - 1
+
+    beats_count = np.min([row_end - row_begin, col_end - col_begin])
+
+    area = sdm[row_begin : row_begin + beats_count, col_begin : col_begin + beats_count]
+
+    # the main diagonal
+    main_diag = np.diag(area, 0)
+
+    # black diagonals
+    diags = np.concatenate((main_diag, np.diag(area, -int(size / 2)), np.diag(area, int(size / 2))))
+
+    _alpha = np.mean(diags)
+    _beta = np.mean(main_diag)
+    _lambda = (np.sum(area) - np.sum(diags)) / (beats_count * beats_count - len(diags))
+
+    rho_alpha = _alpha / _lambda
+    rho_bera = _beta / _lambda
+
+    return rho_alpha, rho_bera
+
+    # count = 0
+    # _alpha = 0
+    # _beta = 0
+    # _lambda = 0
+    #
+    # for j in range(col_end - col_begin):
+    #     i = row_begin + j
+    #     if i >= row_end:
+    #         break
+    #         alpha += sdm[i, j]
+
+def filter_1d(x, sdm):
+    diag_index = x[1] - x[0]
+    diagonal = np.diag(sdm, -diag_index)
+
+    if len(diagonal) < 32:
+        return -1
+
+    window = np.ones(32)
+    inside_sum = np.convolve(diagonal, window, 'valid')
+    diag_sum = np.sum(diagonal)
+    outside_sum = diag_sum - inside_sum
+
+    rate = (inside_sum / 32) / (outside_sum / (len(diagonal) - 32))
+
+    return rate
+
+
 
 # extract audio feature
 audio = read_audio("/Users/xueweiyao/Downloads/musics/汪峰 - 存在.wav")
