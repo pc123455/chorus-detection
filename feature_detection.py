@@ -548,17 +548,6 @@ def filter_2d(x, sdm, size):
 
     return rho_alpha, rho_bera
 
-    # count = 0
-    # _alpha = 0
-    # _beta = 0
-    # _lambda = 0
-    #
-    # for j in range(col_end - col_begin):
-    #     i = row_begin + j
-    #     if i >= row_end:
-    #         break
-    #         alpha += sdm[i, j]
-
 def filter_1d(x, sdm):
     diag_index = x[1] - x[0]
     diagonal = np.diag(sdm, -diag_index)
