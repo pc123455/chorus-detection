@@ -466,17 +466,14 @@ def get_median_distance(sdm, segment):
     return np.median(np.diag(sdm[r_1 : r_2, c_1 : c_2]))
 
 def get_segment_time(segment, beats_time):
-    length = len(segment)
-    time = np.zeros([length, 4])
-    for i in range(len(segment)):
-        for j in range(4):
-            time[i, j] = beats_time[segment[i, j]]
+    time = np.zeros(4)
+    for i in range(4):
+        time[i] = beats_time[segment[i]]
 
     return time
 
 def find_location_of_chorus(segments, sdm):
-    segment = segments[0].copy()
-    chorus = np.zeros([1, 4])
+    segment = segments.copy()
 
     M = len(sdm)
     length = segment[2] - segment[0]
@@ -495,16 +492,17 @@ def find_location_of_chorus(segments, sdm):
 
     # if min_roh_alpha_64 < min_roh_alpha_32, indicates a good match with the 64 beat long chorus with two 32 beat long subsections
     if rho_min_64[0] < rho_min_32[0]:
-        chorus_begin = segment[1] + np.argmin(rho_min_64[:, 0], axis = 0)
+        chorus_begin = segment[1] + np.argmin(rho_64[:, 0], axis = 0)
         chorus_end = np.min([chorus_begin + 64, M])
 
     elif length < 32:
-        chorus_begin = segment[1] + np.argmax(rho_min_32[:, 0], axis = 0)
+        chorus_begin = segment[1] + np.argmax(rho_32[:, 0], axis = 0)
+        chorus_end = np.min([chorus_begin + 32, M])
 
     elif np.abs(length - 48) < np.abs(length - 32) and np.abs(length - 48) < np.abs(length - 64) \
             and rho_min_32[0] < rho_min_64[0] and rho_min_32[1] < rho_min_32[1] \
-            and np.argmin(rho_min_32[:, 0]) == np.argmin(rho_min_32[:, 1]):
-        chorus_begin = segment[1] + np.argmin(rho_min_32[:, 0])
+            and np.argmin(rho_32[:, 0]) == np.argmin(rho_32[:, 1]):
+        chorus_begin = segment[1] + np.argmin(rho_32[:, 0])
         chorus_end = np.min([chorus_begin + 32, M])
 
     else:
@@ -578,9 +576,8 @@ def filter_1d(x, sdm):
     return rate
 
 
-
 # extract audio feature
-audio = read_audio("/Users/xueweiyao/Downloads/musics/汪峰 - 存在.wav")
+audio = read_audio("/Users/xueweiyao/Downloads/musics/张惠妹 - 剪爱.wav")
 beats, beats_time = extract_beat(audio)
 mfcc = extract_mfcc_by_beat(audio, beats)
 chroma = extract_chroma_by_beat(audio, beats)
@@ -609,6 +606,9 @@ final_score, best = select_segment_most_likely_chorus(scores, beats_time, segmen
 time = get_segment_time(best, beats_time)
 print time
 
+chorus = find_location_of_chorus(best, sdm_new)
+print beats_time[chorus[0]]
+print beats_time[chorus[1]]
 # plt.matshow(enhanced_mat, cmap=plt.cm.gray)
 # plt.matshow(sdm_fcc, cmap=plt.cm.gray)
 # plt.matshow(sdm_new, cmap=plt.cm.gray)
