@@ -119,6 +119,11 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     B = np.array([1, 0, -1])
     dig_smooth_diiiferentia = scipy.signal.lfilter(B, 1 ,dig)
 
+    plt.plot(dig_mean)
+    plt.plot(dig)
+    plt.plot(dig_lp)
+    plt.plot(dig_smooth_diiiferentia)
+
     # index where the smoothed differential of diagonals from negative to positive
     # the minima value is the minimum value of diagonals
     minima = np.array([])
@@ -127,17 +132,6 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
         if dig_smooth_diiiferentia[i] < 0 and dig_smooth_diiiferentia[i + 1] > 0:
             minima_indeces = np.append(minima_indeces, i)
             minima = np.append(minima, dig[i])
-
-    # delete max value
-    # if len(minima) > diagonal_num:
-    #     while True:
-    #         add = np.where(minima == max(minima))
-    #         add = add[0 : len(minima) - diagonal_num]
-    #         minima = np.delete(minima, add)
-    #         minima_indeces = np.delete(minima_indeces, add)
-    #
-    #         if len(minima) <= diagonal_num:
-    #             break
 
     # delete by otsu algorithm
     threshold_otsu = get_otsu_threshold(np.matrix(minima))
@@ -156,17 +150,28 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
 
     all_len = len(long_vector)
     long_vector = np.sort(long_vector)
-    threshold = long_vector[int(round(thres_rate * all_len))]
 
-    # calculate a binary matrix
-    binary_matrix = np.zeros([length, length], dtype = int)
+    while(True):
 
-    for index in minima_indeces:
-        temp = np.diag(sdm, -index)
-        for j in range(len(temp)):
-            if temp[j] > threshold:
-                binary_matrix[index + j, j] = 1
+        threshold = long_vector[int(round(thres_rate * all_len))]
+        minima_count = 0
 
+        # calculate a binary matrix
+        binary_matrix = np.zeros([length, length], dtype = int)
+
+
+        for index in minima_indeces:
+            temp = np.diag(sdm, -index)
+            for j in range(len(temp)):
+                if temp[j] > threshold:
+                    binary_matrix[index + j, j] = 1
+                    minima_count += 1
+
+        # if the number of segments is smaller than 10
+        if minima_count < 70:
+            thres_rate += 0.5
+        else:
+            break
 
 
     # enhance the binary matrix
@@ -472,7 +477,7 @@ def get_segment_time(segment, beats_time):
 
     return time
 
-def find_location_of_chorus(segments, sdm):
+def find_location_of_chorus(segments, sdm, time_len = (48, 64, 96)):
     segment = segments.copy()
 
     M = len(sdm)
@@ -481,8 +486,8 @@ def find_location_of_chorus(segments, sdm):
     rho_64 = np.zeros([length, 2])
     for i in range(length):
         x = segment + i
-        rho_32[i] = filter_2d(x, sdm, 32)
-        rho_64[i] = filter_2d(x, sdm, 64)
+        rho_32[i] = filter_2d(x, sdm, time_len[0])
+        rho_64[i] = filter_2d(x, sdm, time_len[2])
 
     rho_min_32 = np.min(rho_32, axis = 0)
     rho_min_64 = np.min(rho_64, axis = 0)
@@ -493,17 +498,17 @@ def find_location_of_chorus(segments, sdm):
     # if min_roh_alpha_64 < min_roh_alpha_32, indicates a good match with the 64 beat long chorus with two 32 beat long subsections
     if rho_min_64[0] < rho_min_32[0]:
         chorus_begin = segment[1] + np.argmin(rho_64[:, 0], axis = 0)
-        chorus_end = np.min([chorus_begin + 64, M])
+        chorus_end = np.min([chorus_begin + time_len[2], M])
 
-    elif length < 32:
-        chorus_begin = segment[1] + np.argmax(rho_32[:, 0], axis = 0)
-        chorus_end = np.min([chorus_begin + 32, M])
+    elif length < time_len[0]:
+        chorus_begin = segment[1] + np.argmin(rho_32[:, 0], axis = 0)
+        chorus_end = np.min([chorus_begin + time_len[0], M])
 
-    elif np.abs(length - 48) < np.abs(length - 32) and np.abs(length - 48) < np.abs(length - 64) \
+    elif np.abs(length - time_len[1]) < np.abs(length - time_len[0]) and np.abs(length - time_len[1]) < np.abs(length - time_len[2]) \
             and rho_min_32[0] < rho_min_64[0] and rho_min_32[1] < rho_min_32[1] \
             and np.argmin(rho_32[:, 0]) == np.argmin(rho_32[:, 1]):
         chorus_begin = segment[1] + np.argmin(rho_32[:, 0])
-        chorus_end = np.min([chorus_begin + 32, M])
+        chorus_end = np.min([chorus_begin + time_len[0], M])
 
     else:
         segment[0] = np.max([1, segment[0] - 5])
@@ -512,13 +517,13 @@ def find_location_of_chorus(segments, sdm):
         segment[3] = np.min([M, segment[3] + 5])
 
         rate = filter_1d(x, sdm)
-        if np.min(rate < 0.7) and np.abs(length - 32) < np.abs(length - 64):
+        if np.min(rate < 0.7) and np.abs(length - time_len[0]) < np.abs(length - time_len[2]):
             chorus_begin = segment[1] + np.argmin(rate)
-            chorus_end = np.min([chorus_begin + 32, M])
+            chorus_end = np.min([chorus_begin + time_len[0], M])
 
-        elif length > 48:
+        elif length > time_len[1]:
             chorus_begin = segment[1] + np.argmin(rate)
-            chorus_end = np.min([chorus_begin + 48, M])
+            chorus_end = np.min([chorus_begin + time_len[0], M])
 
     return chorus_begin, chorus_end
 
@@ -548,25 +553,25 @@ def filter_2d(x, sdm, size):
 
     return rho_alpha, rho_bera
 
-def filter_1d(x, sdm):
+def filter_1d(x, sdm, time_len = 48):
     diag_index = x[1] - x[0]
     diagonal = np.diag(sdm, -diag_index)
 
-    if len(diagonal) < 32:
+    if len(diagonal) < time_len:
         return -1
 
-    window = np.ones(32)
+    window = np.ones(time_len)
     inside_sum = np.convolve(diagonal, window, 'valid')
     diag_sum = np.sum(diagonal)
     outside_sum = diag_sum - inside_sum
 
-    rate = (inside_sum / 32) / (outside_sum / (len(diagonal) - 32))
+    rate = (inside_sum / time_len) / (outside_sum / (len(diagonal) - time_len))
 
     return rate
 
 
 # extract audio feature
-audio = read_audio("/Users/xueweiyao/Downloads/musics/张惠妹 - 剪爱.wav")
+audio = read_audio("/Users/xueweiyao/Downloads/musics/汪峰 - 存在.wav")
 beats, beats_time = extract_beat(audio)
 mfcc = extract_mfcc_by_beat(audio, beats)
 chroma = extract_chroma_by_beat(audio, beats)
@@ -596,15 +601,17 @@ time = get_segment_time(best, beats_time)
 print time
 
 chorus = find_location_of_chorus(best, sdm_new)
+
+plt.matshow(sdm_chroma, cmap = plt.cm.gray)
+plt.matshow(sdm_mfcc, cmap = plt.cm.gray)
+plt.matshow(enhanced_mat, cmap = plt.cm.gray)
+plt.matshow(sdm_new, cmap = plt.cm.gray)
+
 print beats_time[chorus[0]]
 print beats_time[chorus[1]]
-# plt.matshow(enhanced_mat, cmap=plt.cm.gray)
-# plt.matshow(sdm_fcc, cmap=plt.cm.gray)
-# plt.matshow(sdm_new, cmap=plt.cm.gray)
+
+plt.show()
 
 #
-# plt.plot(dig_mean)
-# plt.plot(dig)
-# plt.plot(dig_lp)
-# plt.plot(dig_smooth_diiiferentia)
+
 
