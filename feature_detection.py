@@ -67,7 +67,7 @@ def extract_chroma_by_beat(audio, beats):
 
     return chromas
 
-def calculate_sdm(feature_matrix):
+def calculate_sdm(feature_matrix, is_normalization = False):
     """calculate the self-distance matrix"""
     length = len(feature_matrix)
     self_distance_matrix = np.zeros((length, length))
@@ -77,6 +77,10 @@ def calculate_sdm(feature_matrix):
             row2 = feature_matrix[j, :]
             self_distance_matrix[i, j] = np.sqrt(np.sum(np.square(row1 - row2)))
 
+    if is_normalization:
+        minima = np.min(self_distance_matrix)
+        maxima = np.max(self_distance_matrix)
+        self_distance_matrix = (self_distance_matrix - minima) / (maxima - minima)
     return self_distance_matrix
 
 def enhance_sdm(sdm):
@@ -106,9 +110,10 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     """detect repetition, calculate and return the binarized matrix and indeces of candidate diagonals"""
 
     length = len(sdm)
-    dig_mean = np.zeros(length)
-    for i in range(length):
-        dig_mean[i] = np.sum(np.diag(sdm, -i)) / (length - i)
+    # dig_mean = np.zeros(length)
+    # for i in range(length):
+    #     dig_mean[i] = np.sum(np.diag(sdm, -i)) / (length - i)
+    dig_mean = calculate_sdm_min_diagonal(sdm, window_size = 32)
 
     # using a FIR filter to smooth mean of diagonals
     B = np.ones(50) / 50
@@ -202,6 +207,20 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
                 break
 
     return enhanced_binary_matrix, minima_indeces
+
+def calculate_sdm_min_diagonal(sdm, window_size = 48, is_partial = True):
+    """calculate the min diagonal segment of self-distance matrix"""
+    length = len(sdm)
+    dig_mean = np.zeros(length)
+    for i in range(length):
+        diag = np.diag(sdm, -i)
+        if is_partial and len(diag) > window_size:
+            window = np.ones(window_size) / window_size
+            dig_mean[i] = np.min(np.convolve(diag, window, mode = 'valid'))
+        else:
+            dig_mean[i] = np.sum(np.diag(sdm, -i)) / (length - i)
+
+    return dig_mean
 
 def isenhance(kernel):
     """determine if a diagonal should be enhanced"""
@@ -561,7 +580,7 @@ def filter_1d(x, sdm, time_len = 48):
         return -1
 
     window = np.ones(time_len)
-    inside_sum = np.convolve(diagonal, window, 'valid')
+    inside_sum = np.convolve(diagonal, window, mode = 'valid')
     diag_sum = np.sum(diagonal)
     outside_sum = diag_sum - inside_sum
 
@@ -571,14 +590,14 @@ def filter_1d(x, sdm, time_len = 48):
 
 
 # extract audio feature
-audio = read_audio("/Users/xueweiyao/Downloads/musics/汪峰 - 存在.wav")
+audio = read_audio("/Users/xueweiyao/Downloads/musics/李克勤 - 月半小夜曲.wav")
 beats, beats_time = extract_beat(audio)
 mfcc = extract_mfcc_by_beat(audio, beats)
 chroma = extract_chroma_by_beat(audio, beats)
 
 # calculate the self-distance matrix
-sdm_chroma = calculate_sdm(chroma)
-sdm_mfcc = calculate_sdm(mfcc)
+sdm_chroma = calculate_sdm(chroma, is_normalization = True)
+sdm_mfcc = calculate_sdm(mfcc, is_normalization = True)
 
 
 
@@ -588,9 +607,6 @@ enhanced_mat = enhance_sdm(sdm_chroma)
 # sum the mfcc self-distance matrix and enhanced chroma self-distance matrix
 sdm_new = enhanced_mat + sdm_mfcc
 
-# plt.matshow(sdm_new, cmap = plt.cm.gray)
-# plt.show()
-# otsu_test(sdm_new)
 
 bimar, indeces = detect_repetition(sdm_new)
 segments, bimar = locate_interesting_segment(bimar, indeces, beats_time)
@@ -606,6 +622,7 @@ plt.matshow(sdm_chroma, cmap = plt.cm.gray)
 plt.matshow(sdm_mfcc, cmap = plt.cm.gray)
 plt.matshow(enhanced_mat, cmap = plt.cm.gray)
 plt.matshow(sdm_new, cmap = plt.cm.gray)
+plt.matshow(bimar, cmap = plt.cm.gray)
 
 print beats_time[chorus[0]]
 print beats_time[chorus[1]]
