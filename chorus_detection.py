@@ -240,7 +240,7 @@ def isenhance(kernel):
     else:
         return False
 
-def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold = 4):
+def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold = 5):
     """find the locate interesting segment by binary matrix"""
     point = np.zeros([1, 4], dtype = int)
     segments = np.empty([0, 4], dtype = int)
@@ -293,7 +293,7 @@ def locate_interesting_segment(binary_matrix, indeces, beats, during_threshold =
             if x2[0] >= x1[0] - 5 and x2[2] <= x1[2] + 20 and abs(x2[1] - x1[1]) <= 20 and x2[3] <= x1[3] + 5:
                 segments_close_matrix[i, j] = 1
 
-    #delete some segments with less than 3 closed segment
+    # delete some segments with less than 3 closed segment
     del_indeces = np.array([], dtype=int)
     close_count = np.sum(segments_close_matrix, axis = 0)
     for i in range(len(segments)):
@@ -349,7 +349,8 @@ def calculate_segments_scores(sdm, binary_matrix, segments, audio, beats):
         scores[i, 1] = 1 - np.abs((segments[i, 0] + delta_x / 2) - round(3 * M / 4)) / round(M / 4)
 
     # s_3
-    s_3_scores = calculate_s3(segments)
+    # s_3_scores = calculate_s3(segments)
+    s_3_scores = np.zeros([len(segments), 1])
     scores = np.concatenate((scores, s_3_scores), axis = 1)
 
     # s_4 and s_5
@@ -588,47 +589,44 @@ def filter_1d(x, sdm, time_len = 48):
 
     return rate
 
+def chorus_detection(filename, is_plot = False):
+    # extract audio feature
+    audio = read_audio("/Users/xueweiyao/Downloads/musics/刘欢 - 得民心者得天下.mp3")
+    beats, beats_time = extract_beat(audio)
+    mfcc = extract_mfcc_by_beat(audio, beats)
+    chroma = extract_chroma_by_beat(audio, beats)
 
-# extract audio feature
-audio = read_audio("/Users/xueweiyao/Downloads/musics/李克勤 - 月半小夜曲.wav")
-beats, beats_time = extract_beat(audio)
-mfcc = extract_mfcc_by_beat(audio, beats)
-chroma = extract_chroma_by_beat(audio, beats)
-
-# calculate the self-distance matrix
-sdm_chroma = calculate_sdm(chroma, is_normalization = True)
-sdm_mfcc = calculate_sdm(mfcc, is_normalization = True)
-
-
-
-#enhance the self-distance matrix
-enhanced_mat = enhance_sdm(sdm_chroma)
-
-# sum the mfcc self-distance matrix and enhanced chroma self-distance matrix
-sdm_new = enhanced_mat + sdm_mfcc
+    # calculate the self-distance matrix
+    sdm_chroma = calculate_sdm(chroma, is_normalization = False)
+    sdm_mfcc = calculate_sdm(mfcc, is_normalization = False)
 
 
-bimar, indeces = detect_repetition(sdm_new)
-segments, bimar = locate_interesting_segment(bimar, indeces, beats_time)
-scores = calculate_segments_scores(sdm_new, bimar, segments, audio, beats)
-final_score, best = select_segment_most_likely_chorus(scores, beats_time, segments)
 
-time = get_segment_time(best, beats_time)
-print time
+    #enhance the self-distance matrix
+    enhanced_mat = enhance_sdm(sdm_chroma)
 
-chorus = find_location_of_chorus(best, sdm_new)
+    # sum the mfcc self-distance matrix and enhanced chroma self-distance matrix
+    sdm_new = enhanced_mat + sdm_mfcc
 
-plt.matshow(sdm_chroma, cmap = plt.cm.gray)
-plt.matshow(sdm_mfcc, cmap = plt.cm.gray)
-plt.matshow(enhanced_mat, cmap = plt.cm.gray)
-plt.matshow(sdm_new, cmap = plt.cm.gray)
-plt.matshow(bimar, cmap = plt.cm.gray)
 
-print beats_time[chorus[0]]
-print beats_time[chorus[1]]
+    bimar, indeces = detect_repetition(sdm_new)
+    segments, bimar = locate_interesting_segment(bimar, indeces, beats_time)
+    scores = calculate_segments_scores(sdm_new, bimar, segments, audio, beats)
+    final_score, best = select_segment_most_likely_chorus(scores, beats_time, segments)
 
-plt.show()
+    #time = get_segment_time(best, beats_time)
 
-#
+    chorus = find_location_of_chorus(best, sdm_new)
+
+    if is_plot:
+        plt.matshow(sdm_chroma, cmap = plt.cm.gray)
+        plt.matshow(sdm_mfcc, cmap = plt.cm.gray)
+        plt.matshow(enhanced_mat, cmap = plt.cm.gray)
+        plt.matshow(sdm_new, cmap = plt.cm.gray)
+        plt.matshow(bimar, cmap = plt.cm.gray)
+
+        plt.show()
+
+    return chorus
 
 
