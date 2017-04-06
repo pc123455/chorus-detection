@@ -13,9 +13,26 @@ def read_from_file(filename):
     f.close()
     return list
 
+def write_to_file(filename, content):
+    """write content into file"""
+    f = codecs.open(filename, "a", "utf-8")
+    f.write(content)
+    f.close()
+
+def write_result_to_file(filename, recall, precision):
+    """write the result into file"""
+    recall = map(lambda num : str(num), recall)
+    precision = map(lambda num: str(num), precision)
+
+    recall_str = ','.join(recall) + '\n'
+    precision_str = ','.join(precision) + '\n'
+    write_to_file(filename, 'recall:' + recall_str)
+    write_to_file(filename, 'precision:' + precision_str)
+
 if __name__ == '__main__':
     path = '/Users/xueweiyao/Downloads/chorus/'
     content = read_from_file(path + 'annotation.csv')
+    result_file = 'result.txt'
 
     recall = np.zeros(len(content))
     precision = np.zeros(len(content))
@@ -28,9 +45,4 @@ if __name__ == '__main__':
 
         recall[i], precision[i] = evaluation.evaluate(infos, chorus)
 
-        print recall[i]
-        print precision[i]
-        print chorus
-
-    print recall
-    print precision
+    write_result_to_file(path + result_file, recall, precision)
