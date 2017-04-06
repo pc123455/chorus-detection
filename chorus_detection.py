@@ -124,10 +124,14 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     B = np.array([1, 0, -1])
     dig_smooth_diiiferentia = scipy.signal.lfilter(B, 1 ,dig)
 
-    plt.plot(dig_mean)
-    plt.plot(dig)
-    plt.plot(dig_lp)
-    plt.plot(dig_smooth_diiiferentia)
+    # plt.plot(dig_mean, label = 'mean of diagonals')
+    # plt.plot(dig, label = 'mean of diagonals without linear offset')
+    # plt.plot(dig_lp, label = 'smoothed mean of diagonals')
+    # plt.plot(dig_smooth_diiiferentia, label = 'derivative of mean of diagonals')
+    # plt.title('mean of diagonals')
+    # plt.legend()
+    # plt.show()
+
 
     # index where the smoothed differential of diagonals from negative to positive
     # the minima value is the minimum value of diagonals
@@ -621,7 +625,6 @@ def chorus_detection(filename, is_plot = False):
     # sum the mfcc self-distance matrix and enhanced chroma self-distance matrix
     sdm_new = enhanced_mat + sdm_mfcc
 
-
     bimar, indeces = detect_repetition(sdm_new)
     segments, bimar = locate_interesting_segment(bimar, indeces, beats_time)
     scores = calculate_segments_scores(sdm_new, bimar, segments, audio, beats)
@@ -632,14 +635,36 @@ def chorus_detection(filename, is_plot = False):
     chorus = find_location_of_chorus(best, sdm_new)
 
     if is_plot:
+        fig = plt.figure()
+        ax = fig.add_subplot(211)
+        ax.imshow(mfcc.T, cmap=plt.cm.gray)
+        ax.set_title('mfcc feature matrix')
+        ax.set_aspect(5)
+
+        ax = fig.add_subplot(212)
+        ax.imshow(chroma.T, cmap=plt.cm.gray)
+        ax.set_title('chroma feature matrix')
+        ax.set_aspect(5)
+
+        # plt.matshow(mfcc.T, cmap=plt.cm.gray)
+        # plt.title('mfcc feature matrix')
+        #
+        # plt.matshow(chroma.T, cmap = plt.cm.gray)
+        # plt.title('chroma feature matrix')
         plt.matshow(sdm_chroma, cmap = plt.cm.gray)
+        plt.title('self-similarity matrix obtained from chroma')
         plt.matshow(sdm_mfcc, cmap = plt.cm.gray)
+        plt.title('self-similarity matrix obtained from MFCC')
         plt.matshow(enhanced_mat, cmap = plt.cm.gray)
+        plt.title('enhanced self-similarity matrix obtained from chroma')
         plt.matshow(sdm_new, cmap = plt.cm.gray)
+        plt.title('the new self-similarity matrix')
         plt.matshow(bimar, cmap = plt.cm.gray)
+        plt.title('the binarized matrix')
 
         plt.show()
 
     return chorus
 
-
+if __name__ == '__main__':
+    chorus_detection('/Users/xueweiyao/Downloads/musics/李克勤 - 月半小夜曲.wav', True)
