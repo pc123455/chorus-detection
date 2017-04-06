@@ -141,9 +141,22 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     # delete by otsu algorithm
     threshold_otsu = get_otsu_threshold(np.matrix(minima))
     del_indeces = np.array([])
-    for i in range(len(minima)):
-        if minima[i] > threshold_otsu:
-            del_indeces = np.append(del_indeces, i)
+    # for i in range(len(minima)):
+    #     if minima[i] > threshold_otsu:
+    #         del_indeces = np.append(del_indeces, i)
+
+    while True:
+        threshold_otsu += 1
+        del_indeces = np.array([])
+        for i in range(len(minima)):
+            if minima[i] > threshold_otsu:
+                del_indeces = np.append(del_indeces, i)
+
+        if len(minima_indeces) - len(del_indeces) > 50:
+            break
+
+
+
 
     minima = np.delete(minima, del_indeces)
     minima_indeces = np.delete(minima_indeces, del_indeces)
@@ -173,8 +186,8 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
                     minima_count += 1
 
         # if the number of segments is smaller than 10
-        if minima_count < 70:
-            thres_rate += 0.5
+        if minima_count < 20 and thres_rate < 1:
+            thres_rate += 0.05
         else:
             break
 
@@ -590,8 +603,8 @@ def filter_1d(x, sdm, time_len = 48):
     return rate
 
 def chorus_detection(filename, is_plot = False):
-    # extract audio feature
-    audio = read_audio("/Users/xueweiyao/Downloads/musics/刘欢 - 得民心者得天下.mp3")
+    # extract audio feature "/Users/xueweiyao/Downloads/musics/刘欢 - 得民心者得天下.mp3"
+    audio = read_audio(filename)
     beats, beats_time = extract_beat(audio)
     mfcc = extract_mfcc_by_beat(audio, beats)
     chroma = extract_chroma_by_beat(audio, beats)

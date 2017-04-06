@@ -16,6 +16,7 @@ def read_from_file(filename):
 if __name__ == '__main__':
     path = '/Users/xueweiyao/Downloads/chorus/'
     content = read_from_file(path + 'annotation.csv')
+
     recall = np.zeros(len(content))
     precision = np.zeros(len(content))
     f_measure = np.zeros(len(content))
@@ -23,15 +24,13 @@ if __name__ == '__main__':
         item = content[i]
         infos = item.split(',')
         music_name = infos[0]
-        chorus = chorus_detection.chorus_detection(music_name, False)
-        anno = (float(infos[1]), float(infos[2]))
-        overlap_len = evaluation.calculate_overlap(anno, chorus)
+        chorus = chorus_detection.chorus_detection(path + music_name, False)
 
-        recall[i] = overlap_len / (anno[1] - anno[0])
-        precision[i] = overlap_len / (chorus[1] - chorus[0])
+        recall[i], precision[i] = evaluation.evaluate(infos, chorus)
 
         print recall[i]
         print precision[i]
+        print chorus
 
     print recall
     print precision
