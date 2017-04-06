@@ -113,7 +113,7 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     # dig_mean = np.zeros(length)
     # for i in range(length):
     #     dig_mean[i] = np.sum(np.diag(sdm, -i)) / (length - i)
-    dig_mean = calculate_sdm_min_diagonal(sdm, window_size = 32)
+    dig_mean = calculate_sdm_min_diagonal(sdm, window_size = 48, is_partial = False)
 
     # using a FIR filter to smooth mean of diagonals
     B = np.ones(50) / 50

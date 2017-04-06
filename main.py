@@ -41,8 +41,9 @@ if __name__ == '__main__':
         item = content[i]
         infos = item.split(',')
         music_name = infos[0]
+        print music_name
         chorus = chorus_detection.chorus_detection(path + music_name, False)
 
         recall[i], precision[i] = evaluation.evaluate(infos, chorus)
 
-    write_result_to_file(path + result_file, recall, precision)
+    write_result_to_file(result_file, recall, precision)
