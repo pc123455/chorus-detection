@@ -106,14 +106,11 @@ def enhance_sdm(sdm):
 
     return enhanced_mat
 
-def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
+def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2, min_sdm_window_size = 48, is_local = True, is_plot = False):
     """detect repetition, calculate and return the binarized matrix and indeces of candidate diagonals"""
 
     length = len(sdm)
-    # dig_mean = np.zeros(length)
-    # for i in range(length):
-    #     dig_mean[i] = np.sum(np.diag(sdm, -i)) / (length - i)
-    dig_mean = calculate_sdm_min_diagonal(sdm, window_size = 48, is_partial = False)
+    dig_mean = calculate_sdm_min_diagonal(sdm, window_size = min_sdm_window_size, is_partial = is_local)
 
     # using a FIR filter to smooth mean of diagonals
     B = np.ones(50) / 50
@@ -124,13 +121,13 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2):
     B = np.array([1, 0, -1])
     dig_smooth_diiiferentia = scipy.signal.lfilter(B, 1 ,dig)
 
-    # plt.plot(dig_mean, label = 'mean of diagonals')
-    # plt.plot(dig, label = 'mean of diagonals without linear offset')
-    # plt.plot(dig_lp, label = 'smoothed mean of diagonals')
-    # plt.plot(dig_smooth_diiiferentia, label = 'derivative of mean of diagonals')
-    # plt.title('mean of diagonals')
-    # plt.legend()
-    # plt.show()
+    if is_plot:
+        plt.plot(dig_mean, label = 'mean of diagonals')
+        plt.plot(dig, label = 'mean of diagonals without linear offset')
+        plt.plot(dig_lp, label = 'smoothed mean of diagonals')
+        plt.plot(dig_smooth_diiiferentia, label = 'derivative of mean of diagonals')
+        plt.title('mean of diagonals')
+        plt.legend()
 
 
     # index where the smoothed differential of diagonals from negative to positive
@@ -606,7 +603,7 @@ def filter_1d(x, sdm, time_len = 48):
 
     return rate
 
-def chorus_detection(filename, is_plot = False):
+def chorus_detection(filename, min_sdm_window_size = 48, is_local = True, is_plot = False):
     # extract audio feature "/Users/xueweiyao/Downloads/musics/刘欢 - 得民心者得天下.mp3"
     audio = read_audio(filename)
     beats, beats_time = extract_beat(audio)
@@ -617,15 +614,13 @@ def chorus_detection(filename, is_plot = False):
     sdm_chroma = calculate_sdm(chroma, is_normalization = False)
     sdm_mfcc = calculate_sdm(mfcc, is_normalization = False)
 
-
-
     #enhance the self-distance matrix
     enhanced_mat = enhance_sdm(sdm_chroma)
 
     # sum the mfcc self-distance matrix and enhanced chroma self-distance matrix
     sdm_new = enhanced_mat + sdm_mfcc
 
-    bimar, indeces = detect_repetition(sdm_new)
+    bimar, indeces = detect_repetition(sdm_new, min_sdm_window_size = min_sdm_window_size, is_local = is_local)
     segments, bimar = locate_interesting_segment(bimar, indeces, beats_time)
     scores = calculate_segments_scores(sdm_new, bimar, segments, audio, beats)
     final_score, best = select_segment_most_likely_chorus(scores, beats_time, segments)
