@@ -45,17 +45,46 @@ def test_param(islocal, min_sdm_window_size):
 def exp_for_one_param(param, musics):
     recall = np.zeros(len(musics))
     precision = np.zeros(len(musics))
+
+    # prepare datas and params
+    data_queue = multiprocessing.Queue()
+    for music in musics:
+        data_queue.put({'music': music, 'param': param})
+
+    res_queue = multiprocessing.Queue()
+
+    # start processes
+    processes = []
+    for i in range(4):
+        p = multiprocessing.Process(target = chorus_detection_process, args = (data_queue, res_queue, ))
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
+
+    # get results
     for i in range(len(musics)):
-        item = content[i]
-        infos = item.split(',')
-        music_name = infos[0]
-        print music_name
-        chorus = chorus_detection.chorus_detection(path + music_name,\
-                                                   min_sdm_window_size = param['min_sdm_window_size'],\
-                                                   is_local = param['is_local'])
-        recall[i], precision[i] = evaluation.evaluate(infos, chorus)
+        res = res_queue.get()
+        recall[i] = res[0]
+        precision[i] = res[0]
 
     return recall, precision
+
+def chorus_detection_process(data_q, res_q):
+    while not data_q.empty():
+        item = data_q.get()
+        music = item['music']
+        infos = music.split(',')
+        music_name = infos[0]
+
+        param = item['param']
+        print music_name
+        chorus = chorus_detection.chorus_detection(path + music_name, \
+                                                   min_sdm_window_size=param['min_sdm_window_size'], \
+                                                   is_local=param['is_local'])
+        recall, precision = evaluation.evaluate(infos, chorus)
+        res_q.put((recall, precision))
 
 
 if __name__ == '__main__':
