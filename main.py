@@ -84,11 +84,12 @@ def chorus_detection_process(data_q, res_q):
                                                    min_sdm_window_size=param['min_sdm_window_size'], \
                                                    is_local=param['is_local'])
         recall, precision = evaluation.evaluate(infos, chorus)
+        print music_name, recall, precision
         res_q.put((recall, precision))
 
 
 if __name__ == '__main__':
-    path = '/Users/xueweiyao/Downloads/chorus/'
+    path = '/home/cuc/chorus/'
     content = read_from_file(path + 'annotation.csv')
     result_file = 'result.txt'
     data = []
@@ -116,6 +117,7 @@ if __name__ == '__main__':
         data.append({'recall': recall, 'precision': precision, 'is_local': param['is_local'], 'min_sdm_window_size': 48})
 
     data = {'data': data}
-    data = json.dump(data)
+    print data
+    data = json.dumps(data)
     write_to_file(result_file, data)
     # write_result_to_file(result_file, recall, precision)

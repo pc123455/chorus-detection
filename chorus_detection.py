@@ -153,7 +153,7 @@ def detect_repetition(sdm, diagonal_num = 30, thres_rate = 0.2, min_sdm_window_s
             if minima[i] > threshold_otsu:
                 del_indeces = np.append(del_indeces, i)
 
-        if len(minima_indeces) - len(del_indeces) > 50:
+        if len(minima_indeces) - len(del_indeces) > 50 or len(del_indeces) == 0:
             break
 
 
