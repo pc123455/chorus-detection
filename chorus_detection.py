@@ -511,7 +511,7 @@ def get_segment_time(segment, beats_time):
 
     return time
 
-def find_location_of_chorus(segments, sdm, time_len = (48, 64, 96)):
+def find_location_of_chorus(segments, sdm, time_len = (32, 48, 64)):
     segment = segments.copy()
     chorus = np.zeros([2, 2])
 
