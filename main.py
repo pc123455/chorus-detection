@@ -119,7 +119,7 @@ if __name__ == '__main__':
         print data
         data = json.dumps(data)
         write_to_file(result_file, data)
-
+        write_to_file(result_file, '\n')
     # data = {'data': data}
     # print data
     # data = json.dumps(data)

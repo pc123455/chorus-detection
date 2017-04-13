@@ -564,7 +564,7 @@ def find_location_of_chorus(segments, sdm, time_len = (48, 64, 96)):
         chorus[i, 0] = chorus_begin
         chorus[i, 1] = chorus_end
 
-    return chorus_begin, chorus_end
+    return chorus
 
 def filter_2d(x, sdm, size):
     """calculate the rho rate for a point in self-distance matrix"""
