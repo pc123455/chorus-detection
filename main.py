@@ -96,6 +96,10 @@ if __name__ == '__main__':
     data = []
     params = []
 
+    params.append({'min_sdm_window_size': 4, 'is_local': True})
+    params.append({'min_sdm_window_size': 6, 'is_local': True})
+    params.append({'min_sdm_window_size': 8, 'is_local': True})
+    params.append({'min_sdm_window_size': 12, 'is_local': True})
     params.append({'min_sdm_window_size': 16, 'is_local': True})
     params.append({'min_sdm_window_size': 32, 'is_local': True})
     params.append({'min_sdm_window_size': 48, 'is_local': True})
