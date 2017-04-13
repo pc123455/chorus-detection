@@ -592,7 +592,7 @@ def filter_2d(x, sdm, size):
 
     return rho_alpha, rho_bera
 
-def filter_1d(x, sdm, time_len = 48):
+def filter_1d(x, sdm, time_len = 32):
     diag_index = x[1] - x[0]
     diagonal = np.diag(sdm, -diag_index)
 
