@@ -1,13 +1,20 @@
 import numpy as np
 
 def evaluate(annotation, chorus):
-    anno_num = (len(annotation) - 2) / 2
+    print annotation
+    offset = 5
+    anno_num = (len(annotation) - offset) / 2
     overlap_len = 0
     anno_len = 0
-    chorus_len = chorus[1] - chorus[0]
-    for i in range(1, anno_num + 1):
-        anno = (float(annotation[i * 2]), float(annotation[i * 2 + 1]))
-        overlap_len += calculate_overlap(anno, chorus)
+    chorus_len = 0
+    chorus_num = len(chorus)
+    for i in range(chorus_num):
+        chorus_len += chorus[i, 1] - chorus[i, 0]
+
+    for i in range(anno_num):
+        anno = (float(annotation[i * 2 + offset]), float(annotation[i * 2 + 1 + offset]))
+        for j in range(chorus_num):
+            overlap_len += calculate_overlap(anno, chorus[j])
         anno_len += anno[1] - anno[0]
 
     recall = overlap_len / anno_len

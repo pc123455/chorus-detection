@@ -513,6 +513,7 @@ def get_segment_time(segment, beats_time):
 
 def find_location_of_chorus(segments, sdm, time_len = (48, 64, 96)):
     segment = segments.copy()
+    chorus = np.zeros([2, 2])
 
     M = len(sdm)
     length = segment[2] - segment[0]
@@ -526,38 +527,42 @@ def find_location_of_chorus(segments, sdm, time_len = (48, 64, 96)):
     rho_min_32 = np.min(rho_32, axis = 0)
     rho_min_64 = np.min(rho_64, axis = 0)
 
-    chorus_begin = segment[1]
-    chorus_end = segment[3]
 
-    # if min_roh_alpha_64 < min_roh_alpha_32, indicates a good match with the 64 beat long chorus with two 32 beat long subsections
-    if rho_min_64[0] < rho_min_32[0]:
-        chorus_begin = segment[1] + np.argmin(rho_64[:, 0], axis = 0)
-        chorus_end = np.min([chorus_begin + time_len[2], M])
+    for i in range(2):
+        chorus_begin = segment[1 - i]
+        chorus_end = segment[3 - i]
+        # if min_roh_alpha_64 < min_roh_alpha_32, indicates a good match with the 64 beat long chorus with two 32 beat long subsections
+        if rho_min_64[0] < rho_min_32[0]:
+            chorus_begin = segment[1] + np.argmin(rho_64[:, 0], axis = 0)
+            chorus_end = np.min([chorus_begin + time_len[2], M])
 
-    elif length < time_len[0]:
-        chorus_begin = segment[1] + np.argmin(rho_32[:, 0], axis = 0)
-        chorus_end = np.min([chorus_begin + time_len[0], M])
-
-    elif np.abs(length - time_len[1]) < np.abs(length - time_len[0]) and np.abs(length - time_len[1]) < np.abs(length - time_len[2]) \
-            and rho_min_32[0] < rho_min_64[0] and rho_min_32[1] < rho_min_32[1] \
-            and np.argmin(rho_32[:, 0]) == np.argmin(rho_32[:, 1]):
-        chorus_begin = segment[1] + np.argmin(rho_32[:, 0])
-        chorus_end = np.min([chorus_begin + time_len[0], M])
-
-    else:
-        segment[0] = np.max([1, segment[0] - 5])
-        segment[1] = np.min([M, segment[1] + 5])
-        segment[2] = np.max([1, segment[2] - 5])
-        segment[3] = np.min([M, segment[3] + 5])
-
-        rate = filter_1d(x, sdm)
-        if np.min(rate < 0.7) and np.abs(length - time_len[0]) < np.abs(length - time_len[2]):
-            chorus_begin = segment[1] + np.argmin(rate)
+        elif length < time_len[0]:
+            chorus_begin = segment[1] + np.argmin(rho_32[:, 0], axis = 0)
             chorus_end = np.min([chorus_begin + time_len[0], M])
 
-        elif length > time_len[1]:
-            chorus_begin = segment[1] + np.argmin(rate)
+        elif np.abs(length - time_len[1]) < np.abs(length - time_len[0]) and np.abs(length - time_len[1]) < np.abs(length - time_len[2]) \
+                and rho_min_32[0] < rho_min_64[0] and rho_min_32[1] < rho_min_32[1] \
+                and np.argmin(rho_32[:, 0]) == np.argmin(rho_32[:, 1]):
+            chorus_begin = segment[1] + np.argmin(rho_32[:, 0])
             chorus_end = np.min([chorus_begin + time_len[0], M])
+
+        else:
+            segment[0] = np.max([1, segment[0] - 5])
+            segment[1] = np.min([M, segment[1] + 5])
+            segment[2] = np.max([1, segment[2] - 5])
+            segment[3] = np.min([M, segment[3] + 5])
+
+            rate = filter_1d(x, sdm)
+            if np.min(rate < 0.7) and np.abs(length - time_len[0]) < np.abs(length - time_len[2]):
+                chorus_begin = segment[1] + np.argmin(rate)
+                chorus_end = np.min([chorus_begin + time_len[0], M])
+
+            elif length > time_len[1]:
+                chorus_begin = segment[1] + np.argmin(rate)
+                chorus_end = np.min([chorus_begin + time_len[0], M])
+
+        chorus[i, 0] = chorus_begin
+        chorus[i, 1] = chorus_end
 
     return chorus_begin, chorus_end
 

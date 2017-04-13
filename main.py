@@ -55,8 +55,8 @@ def exp_for_one_param(param, musics):
 
     # start processes
     processes = []
-    for i in range(4):
-        p = multiprocessing.Process(target = chorus_detection_process, args = (data_queue, res_queue, ))
+    for i in range(16):
+        p = multiprocessing.Process(target = chorus_detection_process, args = (data_queue, res_queue, i, ))
         p.start()
         processes.append(p)
 
@@ -67,30 +67,31 @@ def exp_for_one_param(param, musics):
     for i in range(len(musics)):
         res = res_queue.get()
         recall[i] = res[0]
-        precision[i] = res[0]
+        precision[i] = res[1]
 
     return recall, precision
 
-def chorus_detection_process(data_q, res_q):
+def chorus_detection_process(data_q, res_q, process_id):
     while not data_q.empty():
         item = data_q.get()
         music = item['music']
         infos = music.split(',')
-        music_name = infos[0]
+        music_name = infos[2]
 
         param = item['param']
-        print music_name
+        print music_name, process_id
         chorus = chorus_detection.chorus_detection(path + music_name, \
                                                    min_sdm_window_size=param['min_sdm_window_size'], \
                                                    is_local=param['is_local'])
         recall, precision = evaluation.evaluate(infos, chorus)
-        print music_name, recall, precision
+        print music_name, recall, precision, process_id
         res_q.put((recall, precision))
 
 
 if __name__ == '__main__':
-    path = '/home/cuc/chorus/'
+    path = '/home/cuc/Music/chorus/'
     content = read_from_file(path + 'annotation.csv')
+    content.pop(0)
     result_file = 'result.txt'
     data = []
     params = []
@@ -114,10 +115,14 @@ if __name__ == '__main__':
     for param in params:
         recall, precision = exp_for_one_param(param, content)
         # multi processing
-        data.append({'recall': recall, 'precision': precision, 'is_local': param['is_local'], 'min_sdm_window_size': 48})
+        data = {'recall': recall.tolist(), 'precision': precision.tolist(), 'is_local': param['is_local'], 'min_sdm_window_size': 48}
+        print data
+        data = json.dumps(data)
+        write_to_file(result_file, data)
 
-    data = {'data': data}
-    print data
-    data = json.dumps(data)
-    write_to_file(result_file, data)
+    # data = {'data': data}
+    # print data
+    # data = json.dumps(data)
+    # print data
+    # write_to_file(result_file, data)
     # write_result_to_file(result_file, recall, precision)
