@@ -511,7 +511,7 @@ def get_segment_time(segment, beats_time):
 
     return time
 
-def find_location_of_chorus(segments, sdm, time_len = (48, 72, 96)):
+def find_location_of_chorus(segments, sdm, beats_time, time_len = (48, 72, 96)):
     segment = segments.copy()
     chorus = np.zeros([2, 2])
 
@@ -561,8 +561,8 @@ def find_location_of_chorus(segments, sdm, time_len = (48, 72, 96)):
                 chorus_begin = segment[1] + np.argmin(rate)
                 chorus_end = np.min([chorus_begin + time_len[0], M])
 
-        chorus[i, 0] = chorus_begin
-        chorus[i, 1] = chorus_end
+        chorus[i, 0] = beats_time[chorus_begin]
+        chorus[i, 1] = beats_time[chorus_end]
 
     return chorus
 
@@ -632,7 +632,7 @@ def chorus_detection(filename, min_sdm_window_size = 48, is_local = True, is_plo
 
     #time = get_segment_time(best, beats_time)
 
-    chorus = find_location_of_chorus(best, sdm_new)
+    chorus = find_location_of_chorus(best, sdm_new, beats_time)
 
     if is_plot:
         fig = plt.figure()
