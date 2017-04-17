@@ -81,8 +81,8 @@ def chorus_detection_process(data_q, res_q, process_id):
         param = item['param']
         print music_name, process_id
         chorus = chorus_detection.chorus_detection(path + music_name, \
-                                                   min_sdm_window_size=param['min_sdm_window_size'], \
-                                                   is_local=param['is_local'])
+                                                   min_sdm_window_size = param['min_sdm_window_size'], \
+                                                   is_local = param['is_local'])
         recall, precision = evaluation.evaluate(infos, chorus)
         print music_name, recall, precision, process_id
         res_q.put((recall, precision))
