@@ -533,17 +533,17 @@ def find_location_of_chorus(segments, sdm, beats_time, time_len = (48, 72, 96)):
         chorus_end = segment[3 - i]
         # if min_roh_alpha_64 < min_roh_alpha_32, indicates a good match with the 64 beat long chorus with two 32 beat long subsections
         if rho_min_64[0] < rho_min_32[0]:
-            chorus_begin = segment[1] + np.argmin(rho_64[:, 0], axis = 0)
+            chorus_begin = chorus_begin + np.argmin(rho_64[:, 0], axis = 0)
             chorus_end = np.min([chorus_begin + time_len[2], M])
 
         elif length < time_len[0]:
-            chorus_begin = segment[1] + np.argmin(rho_32[:, 0], axis = 0)
+            chorus_begin = chorus_begin + np.argmin(rho_32[:, 0], axis = 0)
             chorus_end = np.min([chorus_begin + time_len[0], M])
 
         elif np.abs(length - time_len[1]) < np.abs(length - time_len[0]) and np.abs(length - time_len[1]) < np.abs(length - time_len[2]) \
                 and rho_min_32[0] < rho_min_64[0] and rho_min_32[1] < rho_min_32[1] \
                 and np.argmin(rho_32[:, 0]) == np.argmin(rho_32[:, 1]):
-            chorus_begin = segment[1] + np.argmin(rho_32[:, 0])
+            chorus_begin = chorus_begin + np.argmin(rho_32[:, 0])
             chorus_end = np.min([chorus_begin + time_len[0], M])
 
         else:
