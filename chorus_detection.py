@@ -552,13 +552,16 @@ def find_location_of_chorus(segments, sdm, beats_time, time_len = (48, 72, 96)):
             segment[2] = np.max([1, segment[2] - 5])
             segment[3] = np.min([M, segment[3] + 5])
 
+            chorus_begin = np.max([1, chorus_begin - 5])
+            chorus_end = np.min([M, chorus_end + 5])
+
             rate = filter_1d(x, sdm)
             if np.min(rate < 0.7) and np.abs(length - time_len[0]) < np.abs(length - time_len[2]):
-                chorus_begin = segment[1] + np.argmin(rate)
+                chorus_begin = chorus_begin + np.argmin(rate)
                 chorus_end = np.min([chorus_begin + time_len[0], M])
 
             elif length > time_len[1]:
-                chorus_begin = segment[1] + np.argmin(rate)
+                chorus_begin = chorus_begin + np.argmin(rate)
                 chorus_end = np.min([chorus_begin + time_len[0], M])
 
         chorus[i, 0] = beats_time[chorus_begin]
