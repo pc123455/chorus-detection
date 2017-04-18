@@ -1,7 +1,7 @@
 import numpy as np
 
 def evaluate(annotation, chorus):
-    print annotation
+    # print annotation
     offset = 5
     anno_num = (len(annotation) - offset) / 2
     overlap_len = 0
