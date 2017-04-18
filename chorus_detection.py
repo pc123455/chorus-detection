@@ -28,7 +28,7 @@ def extract_mfcc_by_beat(audio, beats):
     spectrum = Spectrum()
     mfcc = MFCC()
     mfccs = []
-    w = Windowing(type = 'square')
+    w = Windowing(type = 'hann')
 
     for i in range(len(beats) - 1):
         buffer = audio[int(beats[i]) : int(beats[i + 1])]
@@ -48,7 +48,7 @@ def extract_chroma_by_beat(audio, beats):
     """extrac chroma by beats from audio"""
     spectrum = Spectrum()
     spec_peak = SpectralPeaks()
-    w = Windowing(type = 'square')
+    w = Windowing(type = 'hann')
     hpcp = HPCP()
     chromas = []
 
